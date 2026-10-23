@@ -1,13 +1,16 @@
 using System.Diagnostics;
 using Dapper;
+using WeldTrace.Core.Spc;
 
 namespace WeldTrace.Data.Tests;
 
 /// <summary>
-/// 60일치 합성 샘플(약 10만 행) 전체 적재. 기대값은 tools/reference/expected_counts.py가
+/// 77가동일 합성 샘플(약 13만 행) 전체 적재. 기대값은 tools/reference/expected_counts.py가
 /// C# 구현과 독립적으로 계산한 값이다 (교차 검증).
-///   data_lines=106705 p2=1 d1=1 accepted=106703
-///   modules=2736 verdicts={OK: 2676, NG: 59, HOLD: 1} ng_by_fault={POWER_DROP: 49, NO_OUTPUT: 10}
+///   data_lines=134005 p2=1 d1=1 accepted=134003
+///   modules=3436 verdicts={OK: 3369, NG: 66, HOLD: 1} ng_by_fault={POWER_DROP: 59, NO_OUTPUT: 7}
+/// 열화 감시(가동일 단위, 기준 10일): 77일, 첫 EWMA·CUSUM 경보 2026-03-02, 경보 55일
+/// (합성 데이터는 2월 24일부터 열화가 시작되도록 만들었다)
 /// </summary>
 public class SampleScaleTests
 {
@@ -39,8 +42,8 @@ public class SampleScaleTests
         sw.Stop();
 
         Assert.Equal(IngestStatus.Succeeded, report.Status);
-        Assert.Equal((106705, 106703, 2, 0), (report.RowsRead, report.RowsLoaded, report.RowsRejected, report.RowsAlreadyLoaded));
-        Assert.Equal(2736, report.ModulesClosed);
+        Assert.Equal((134005, 134003, 2, 0), (report.RowsRead, report.RowsLoaded, report.RowsRejected, report.RowsAlreadyLoaded));
+        Assert.Equal(3436, report.ModulesClosed);
         Assert.Equal(new[] { "D1", "P2", "T1" }, report.Issues.Select(i => i.Code).OrderBy(c => c));
 
         await using var c = await db.OpenAsync();
@@ -48,11 +51,19 @@ public class SampleScaleTests
             "SELECT verdict AS Verdict, primary_fault AS PrimaryFault, COUNT(*) AS N FROM dbo.module " +
             "GROUP BY verdict, primary_fault")).ToDictionary(x => (x.Verdict, x.PrimaryFault), x => x.N);
 
-        Assert.Equal(2676, counts[("OK", null)]);
-        Assert.Equal(49, counts[("NG", "POWER_DROP")]);
-        Assert.Equal(10, counts[("NG", "NO_OUTPUT")]);
+        Assert.Equal(3369, counts[("OK", null)]);
+        Assert.Equal(59, counts[("NG", "POWER_DROP")]);
+        Assert.Equal(7, counts[("NG", "NO_OUTPUT")]);
         Assert.Equal(1, counts.Where(kv => kv.Key.Verdict == "HOLD").Sum(kv => kv.Value));
         Assert.Equal(4, counts.Count);
+
+        // 열화 감시: DB의 일별 평균 → DriftAnalyzer. 기대값은 독립 Python 계산과 같다.
+        var daily = await new QueryService(db.ConnectionString).DailyQualityAsync("LW-01");
+        var drift = DriftAnalyzer.Analyze(daily.Select(d => (d.WorkDate, d.MeanPowerRatio!.Value)).ToList())!;
+        Assert.Equal(77, drift.Points.Count);
+        Assert.Equal(new DateTime(2026, 3, 2), drift.FirstEwmaAlarm!.Value.Date);
+        Assert.Equal(new DateTime(2026, 3, 2), drift.FirstCusumAlarm!.Value.Date);
+        Assert.Equal(55, drift.Points.Count(p => p.EwmaAlarm));
 
         // 같은 파일을 다시 넣어도 아무것도 바뀌지 않는다 (K1)
         var again = await service.IngestFileAsync(SampleFile(), "LW-01");

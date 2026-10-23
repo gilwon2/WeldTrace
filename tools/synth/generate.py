@@ -7,7 +7,7 @@ KAMP 원본 데이터는 재배포 허용이 명시되어 있지 않아 저장�
     PageNo, Speed, Length, RealPower, SetFrequency, SetDuty, SetPower, GateOnTime, WorkingTime
 
 사용법:
-    python tools/synth/generate.py --days 60 --seed 7 --out data/sample
+    python tools/synth/generate.py --days 77 --seed 7 --out data/sample
 
 출력:
     welding_<start>_<end>.csv   용접 기록 (원본 형식)
@@ -41,8 +41,21 @@ RECIPE = {
     83: {"speed": 250, "length": 241.2, "gate": 1670, "nominal": 1721.0, "sd": 4.0},
 }
 
-# 원본에서 관측한 출력 열화: 실측/공칭 비율이 하루 약 0.008%씩 감소
-DRIFT_PER_DAY = -0.00008
+# 원본에서 관측한 출력 열화 패턴 (같은 조건 용접의 월평균, docs/analysis.md 3절)
+#   1~2월: 안정 → 3~5월: 월 약 -0.19% → 6~7월: 월 약 -0.38%로 가속
+STABLE_DAYS = 50
+EARLY_RATE = -0.000063   # 하루 -0.0063%
+LATE_START = 140
+LATE_RATE = -0.000127    # 하루 -0.0127%
+
+
+def drift_factor(age_days: int) -> float:
+    """시작 후 경과 일수에 따른 출력 배율 (1.0 = 기준기 공칭 출력)."""
+    if age_days < STABLE_DAYS:
+        return 1.0
+    if age_days < LATE_START:
+        return 1.0 + EARLY_RATE * (age_days - STABLE_DAYS)
+    return 1.0 + EARLY_RATE * (LATE_START - STABLE_DAYS) + LATE_RATE * (age_days - LATE_START)
 
 HEADER = [" PageNo", " Speed", " Length", " RealPower", " SetFrequency",
           " SetDuty", " SetPower", " GateOnTime", " WorkingTime"]
@@ -53,17 +66,19 @@ def weld_row(page, set_power, real_power, ts, recipe):
             set_power, recipe["gate"], " " + ts.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]]
 
 
-def generate(days: int, seed: int, start: datetime, modules_per_day: int):
+def generate(days: int, seed: int, start: datetime, modules_per_day: int, production_probability: float = 0.55):
     rng = random.Random(seed)
     rows, labels = [], []
     day = start
     produced_days = 0
     while produced_days < days:
-        if day.weekday() >= 5:  # 주말 비가동
+        # 주말 비가동. 평일도 원본처럼 띄엄띄엄 가동한다 (원본: 7개월 중 77일 가동, 주당 약 2.6일)
+        if day.weekday() >= 5 or rng.random() > production_probability:
             day += timedelta(days=1)
             continue
         age = (day - start).days
-        drift = 1.0 + DRIFT_PER_DAY * age
+        # 가동일마다 출력 수준이 조금씩 다르다 (원본 기준기의 일평균 표준편차 약 0.07%)
+        drift = drift_factor(age) + rng.gauss(0, 0.0006)
         ts = day.replace(hour=9, minute=0, second=0) + timedelta(seconds=rng.uniform(0, 600))
         n_modules = max(1, int(rng.gauss(modules_per_day, 8)))
         for _ in range(n_modules):
@@ -124,15 +139,16 @@ def inject_data_quality_issues(rows, labels, rng):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=60)
+    ap.add_argument("--days", type=int, default=77, help="가동일 수 (원본과 같은 77일)")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--start", default="2026-01-05")
     ap.add_argument("--modules-per-day", type=int, default=45)
+    ap.add_argument("--production-probability", type=float, default=0.55, help="평일 가동 확률")
     ap.add_argument("--out", default="data/sample")
     args = ap.parse_args()
 
     start = datetime.strptime(args.start, "%Y-%m-%d")
-    rows, labels = generate(args.days, args.seed, start, args.modules_per_day)
+    rows, labels = generate(args.days, args.seed, start, args.modules_per_day, args.production_probability)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     first = rows[0][8].strip()[:10].replace("-", "")
