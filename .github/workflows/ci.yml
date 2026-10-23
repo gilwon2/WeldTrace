@@ -23,10 +23,9 @@ jobs:
           set -o pipefail
           dotnet build WeldTrace.sln --no-restore -c Release 2>&1 | tee build.log
           # 컴파일러 경고를 주석으로 남긴다 (경고 0건 유지가 목표)
-          grep -oE "[^ ]+\.cs\([0-9]+,[0-9]+\): warning [A-Za-z0-9]+: .*" build.log | sort -u | while read -r line; do
-            echo "::warning::$line"
-          done
-          echo "::notice::Build warnings: $(grep -oE "[^ ]+\.cs\([0-9]+,[0-9]+\): warning" build.log | sort -u | wc -l)"
+          { grep -oE "[^ ]+\.cs\([0-9]+,[0-9]+\): warning [A-Za-z0-9]+: .*" build.log || true; } | sort -u > warnings.txt
+          while read -r line; do echo "::warning::$line"; done < warnings.txt
+          echo "::notice::Build warnings: $(wc -l < warnings.txt)"
 
       - name: Test
         run: >
