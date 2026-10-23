@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+TestResults/
+.git/
+.github/
+data/inbox/
+data/processed/
+data/failed/

@@ -1,6 +1,9 @@
-# 로컬 개발용 SQL Server
-#   docker compose up -d
-#   통합 테스트: WELDTRACE_TEST_SQL 환경 변수를 아래 접속 문자열로 설정 후 dotnet test
+# WeldTrace 로컬 실행: SQL Server + 용접기 시뮬레이터 + 수집기
+#   docker compose up -d --build
+#   docker compose logs -f collector
+#
+# 통합 테스트만 돌릴 때는 sqlserver만 띄우고 WELDTRACE_TEST_SQL을 설정한다:
+#   docker compose up -d sqlserver
 #   Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False
 services:
   sqlserver:
@@ -18,5 +21,35 @@ services:
       timeout: 5s
       retries: 12
 
+  collector:
+    build:
+      context: .
+      args:
+        PROJECT: WeldTrace.Collector
+    environment:
+      ConnectionStrings__WeldTrace: "Server=sqlserver,1433;Database=WeldTrace;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+      Collector__InboxPath: /data/inbox
+      Collector__ProcessedPath: /data/processed
+      Collector__FailedPath: /data/failed
+      Collector__PollSeconds: "5"
+    volumes:
+      - weldtrace-data:/data
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  # 합성 샘플을 3600배속(실제 1초 = 설비 1시간)으로 재생해 5초마다 조각 파일을 내려놓는다
+  simulator:
+    build:
+      context: .
+      args:
+        PROJECT: WeldTrace.Simulator
+    command: ["--source", "/app/sample/welding_*.csv.gz", "--inbox", "/data/inbox", "--speed", "3600", "--interval", "5"]
+    volumes:
+      - weldtrace-data:/data
+    depends_on:
+      - collector
+
 volumes:
   weldtrace-sql:
+  weldtrace-data:

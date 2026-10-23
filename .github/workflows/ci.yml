@@ -74,3 +74,40 @@ jobs:
           python tools/synth/generate.py --days 5 --seed 7 --out /tmp/a
           python tools/synth/generate.py --days 5 --seed 7 --out /tmp/b
           diff -r /tmp/a /tmp/b
+
+  # 종단 테스트: docker compose로 SQL Server + 시뮬레이터 + 수집기를 띄워 실제로 데이터가 흐르는지 확인
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose up -d --build
+
+      - name: Wait for modules to be collected
+        run: |
+          sql() {
+            docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa \
+              -P 'WeldTrace!Local2026' -h -1 -W -Q "SET NOCOUNT ON; $1" 2>/dev/null | tr -d '[:space:]'
+          }
+          for i in $(seq 1 36); do
+            modules=$(sql "IF DB_ID('WeldTrace') IS NOT NULL AND OBJECT_ID('WeldTrace.dbo.module') IS NOT NULL SELECT COUNT(*) FROM WeldTrace.dbo.module ELSE SELECT 0")
+            echo "t=$((i*5))s modules=${modules:-0}"
+            if [ "${modules:-0}" -ge 50 ]; then
+              batches=$(sql "SELECT COUNT(*) FROM WeldTrace.dbo.ingest_batch WHERE status='SUCCEEDED'")
+              welds=$(sql "SELECT COUNT(*) FROM WeldTrace.dbo.weld")
+              ng=$(sql "SELECT COUNT(*) FROM WeldTrace.dbo.module WHERE verdict='NG'")
+              echo "::notice::E2E: ${batches} files collected, ${welds} welds, ${modules} modules (${ng} NG) after $((i*5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::E2E: 3분 안에 모듈이 50개 이상 수집되지 않았습니다"
+          docker compose logs --no-color --tail 40 collector | sed 's/^/::error::collector /'
+          docker compose logs --no-color --tail 20 simulator | sed 's/^/::error::simulator /'
+          exit 1
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v
