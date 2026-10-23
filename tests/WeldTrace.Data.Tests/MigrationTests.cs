@@ -22,6 +22,26 @@ public class MigrationTests
     }
 
     [SqlFact]
+    public async Task Migration_lock_is_released_even_though_the_connection_is_pooled()
+    {
+        // 회귀 테스트: 연결 풀이 세션을 살려 두어 잠금이 남아 있으면, 다른 프로세스(웹·수집기)가 영원히 기다린다.
+        await using var db = await TestDatabase.CreateAsync(migrate: false);
+        await Task.WhenAll(SqlMigrator.MigrateAsync(db.ConnectionString), SqlMigrator.MigrateAsync(db.ConnectionString));
+
+        var other = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(db.ConnectionString) { Pooling = false }.ConnectionString;
+        await using var c = new Microsoft.Data.SqlClient.SqlConnection(other);
+        await c.OpenAsync();
+        var result = await c.QuerySingleAsync<int>("""
+            DECLARE @r int;
+            EXEC @r = sys.sp_getapplock @Resource = N'WeldTrace.Migrate', @LockMode = N'Exclusive',
+                                        @LockOwner = N'Session', @LockTimeout = 0;
+            SELECT @r;
+            """);
+        Assert.True(result >= 0, $"잠금이 남아 있습니다 (sp_getapplock 결과 {result})");
+        Assert.Equal(3, await c.QuerySingleAsync<int>("SELECT COUNT(*) FROM dbo.schema_version"));
+    }
+
+    [SqlFact]
     public async Task Ensure_database_creates_missing_database_once()
     {
         var server = Environment.GetEnvironmentVariable(TestDatabase.EnvVar)!;

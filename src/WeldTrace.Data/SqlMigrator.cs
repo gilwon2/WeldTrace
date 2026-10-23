@@ -55,14 +55,21 @@ public static partial class SqlMigrator
         await using var master = new SqlConnection(builder.ConnectionString);
         await master.OpenAsync(ct);
         // 이름은 QUOTENAME으로 감싸 동적 SQL 주입을 막는다.
+        // 수집기와 웹이 동시에 시작하면 둘 다 "없음"을 보고 CREATE를 시도할 수 있다.
+        // 늦은 쪽이 받는 "이미 있음"(1801) 오류는 정상으로 본다. 빈 서버에서 CREATE DATABASE는 수십 초 걸리기도 한다.
         await master.ExecuteAsync(new CommandDefinition(
             """
             IF DB_ID(@name) IS NULL
             BEGIN
-                DECLARE @sql nvarchar(400) = N'CREATE DATABASE ' + QUOTENAME(@name);
-                EXEC sys.sp_executesql @sql;
+                BEGIN TRY
+                    DECLARE @sql nvarchar(400) = N'CREATE DATABASE ' + QUOTENAME(@name);
+                    EXEC sys.sp_executesql @sql;
+                END TRY
+                BEGIN CATCH
+                    IF ERROR_NUMBER() <> 1801 THROW;
+                END CATCH
             END
-            """, new { name }, cancellationToken: ct));
+            """, new { name }, commandTimeout: 180, cancellationToken: ct));
     }
 
     /// <summary>적용되지 않은 스크립트를 적용하고, 새로 적용한 버전 목록을 돌려준다.</summary>
@@ -72,13 +79,26 @@ public static partial class SqlMigrator
         await connection.OpenAsync(ct);
 
         // 수집기와 웹이 동시에 뜨면 둘 다 마이그레이션을 시도한다. 세션 잠금으로 한 번에 하나만 적용하게 한다.
-        // 잠금은 연결이 닫힐 때 풀린다.
+        // 주의: 연결을 Dispose해도 연결 풀이 세션을 살려 두므로 잠금이 풀리지 않는다. finally에서 반드시 직접 해제한다.
         await connection.ExecuteAsync(new CommandDefinition("""
             DECLARE @result int;
             EXEC @result = sys.sp_getapplock @Resource = N'WeldTrace.Migrate', @LockMode = N'Exclusive',
                                              @LockOwner = N'Session', @LockTimeout = 60000;
             IF @result < 0 THROW 50001, N'마이그레이션 잠금을 얻지 못했습니다.', 1;
-            """, cancellationToken: ct));
+            """, commandTimeout: 90, cancellationToken: ct));
+        try
+        {
+            return await ApplyPendingAsync(connection, ct);
+        }
+        finally
+        {
+            await connection.ExecuteAsync(
+                "EXEC sys.sp_releaseapplock @Resource = N'WeldTrace.Migrate', @LockOwner = N'Session';");
+        }
+    }
+
+    private static async Task<IReadOnlyList<int>> ApplyPendingAsync(SqlConnection connection, CancellationToken ct)
+    {
 
         await connection.ExecuteAsync("""
             IF OBJECT_ID(N'dbo.schema_version', N'U') IS NULL
