@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore WeldTrace.sln
+
+      - name: Build
+        run: dotnet build WeldTrace.sln --no-restore -c Release
+
+      - name: Test
+        run: >
+          dotnet test WeldTrace.sln --no-build -c Release
+          --logger "trx;LogFileName=results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+
+  synth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Synthetic data generator is reproducible
+        run: |
+          python tools/synth/generate.py --days 5 --seed 7 --out /tmp/a
+          python tools/synth/generate.py --days 5 --seed 7 --out /tmp/b
+          diff -r /tmp/a /tmp/b

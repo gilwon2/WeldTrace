@@ -1,0 +1,33 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6A1F7C2B-1D2E-4F3A-9B8C-0D1E2F3A4B01}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6A1F7C2B-1D2E-4F3A-9B8C-0D1E2F3A4B02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeldTrace.Core", "src\WeldTrace.Core\WeldTrace.Core.csproj", "{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeldTrace.Core.Tests", "tests\WeldTrace.Core.Tests\WeldTrace.Core.Tests.csproj", "{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D02}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D02}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D01} = {6A1F7C2B-1D2E-4F3A-9B8C-0D1E2F3A4B01}
+		{3C9D5E1A-7B2F-4C8D-A1E0-5F6A7B8C9D02} = {6A1F7C2B-1D2E-4F3A-9B8C-0D1E2F3A4B02}
+	EndGlobalSection
+EndGlobal
