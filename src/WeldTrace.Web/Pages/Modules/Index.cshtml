@@ -33,7 +33,7 @@
         </select>
     </label>
     <button class="btn" type="submit">조회</button>
-    <span class="muted">@Model.Modules.Count개@(Model.Modules.Count == 500 ? " (최근 500개까지)" : "")</span>
+    <span class="muted">@(Model.Modules.Count)개@(Model.Modules.Count == 500 ? " (최근 500개까지)" : "")</span>
 </form>
 
 @if (Model.Modules.Count == 0)

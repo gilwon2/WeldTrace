@@ -33,12 +33,12 @@ else
         <article class="kpi">
             <span class="kpi-label">판정 완료 모듈</span>
             <strong class="kpi-value">@Fmt.Num(o.Modules)</strong>
-            <span class="kpi-note">용접 @Fmt.Num(o.Welds)회 · 대기 중 @Fmt.Num(o.OpenWelds)회</span>
+            <span class="kpi-note">용접 @(Fmt.Num(o.Welds))회 · 대기 중 @(Fmt.Num(o.OpenWelds))회</span>
         </article>
         <article class="kpi">
             <span class="kpi-label">최근 가동일 불량률 (@Fmt.Date(last.WorkDate))</span>
             <strong class="kpi-value @(last.NgModules > 0 ? "text-ng" : "")">@Fmt.Pct(last.NgRate)</strong>
-            <span class="kpi-note">@last.Modules개 중 불량 @last.NgModules · 경고 @last.WarningModules</span>
+            <span class="kpi-note">@(last.Modules)개 중 불량 @last.NgModules · 경고 @last.WarningModules</span>
         </article>
         <article class="kpi">
             <span class="kpi-label">누적 판정</span>
@@ -50,7 +50,7 @@ else
             @if (drift is null)
             {
                 <strong class="kpi-value muted">판단 보류</strong>
-                <span class="kpi-note">가동일 @DriftView.MinimumDays일 이상 필요</span>
+                <span class="kpi-note">가동일 @(DriftView.MinimumDays)일 이상 필요</span>
             }
             else if (drift.AlarmNow)
             {

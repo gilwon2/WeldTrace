@@ -10,7 +10,7 @@
         <p class="crumb"><a href="/Modules">모듈 추적</a> /</p>
         <h1>모듈 #@m.ModuleId <span class="badge big @Fmt.VerdictClass(m.Verdict)">@Fmt.VerdictLabel(m.Verdict)</span></h1>
         <p class="sub">
-            @Fmt.Time(m.StartTime) ~ @Fmt.Time(m.EndTime) · 용접 @m.WeldCount회@(m.IsComplete ? "" : " (불완전)")
+            @Fmt.Time(m.StartTime) ~ @Fmt.Time(m.EndTime) · 용접 @(m.WeldCount)회@(m.IsComplete ? "" : " (불완전)")
             · 대표 @(string.IsNullOrEmpty(m.PrimaryFault) ? "이상 없음" : Fmt.FaultLabel(m.PrimaryFault))
             · 평균 출력 비율 @Fmt.Ratio(m.MeanPowerRatio)
         </p>
