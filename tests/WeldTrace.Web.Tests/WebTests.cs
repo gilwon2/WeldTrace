@@ -43,8 +43,8 @@ public class WebTests
         await using var app = new WebApp(db.ConnectionString);
         var client = app.CreateClient();
 
-        Assert.Contains("아직 수집된 데이터가 없습니다", await client.GetStringAsync("/"));
-        Assert.Contains("가동일이 부족합니다", await client.GetStringAsync("/Drift"));
+        Assert.Contains("아직 수집된 데이터가 없습니다", await GetOkAsync(client, "/"));
+        Assert.Contains("가동일이 부족합니다", await GetOkAsync(client, "/Drift"));
         Assert.Contains("조건에 맞는 모듈이 없습니다", await client.GetStringAsync("/Modules"));
         Assert.Contains("아직 수집 이력이 없습니다", await client.GetStringAsync("/Batches"));
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health")).StatusCode);
@@ -58,23 +58,23 @@ public class WebTests
         await using var app = new WebApp(db.ConnectionString);
         var client = app.CreateClient();
 
-        var home = await client.GetStringAsync("/");
+        var home = await GetOkAsync(client, "/");
         Assert.Contains("최근 불량 모듈", home);
         Assert.Contains("50.0%", home); // 최근 가동일(1/6) 불량률: 2개 중 1개
 
-        var ngList = await client.GetStringAsync("/Modules?verdict=NG");
+        var ngList = await GetOkAsync(client, "/Modules?verdict=NG");
         Assert.Contains("출력 저하", ngList);
         Assert.Contains("미출력", ngList);
 
         var ng = (await new QueryService(db.ConnectionString).ModulesAsync(Eq, verdict: "NG"))
             .Single(m => m.PrimaryFault == "POWER_DROP");
-        var detail = await client.GetStringAsync($"/Modules/{ng.ModuleId}");
+        var detail = await GetOkAsync(client, $"/Modules/{ng.ModuleId}");
         Assert.Contains($"모듈 #{ng.ModuleId}", detail);
         Assert.Equal(1, CountOccurrences(detail, "class=\"row-ng\""));
         Assert.Contains("0.5886", detail); // 1000 / 1699
 
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/Modules/999999")).StatusCode);
-        Assert.Contains("이슈가 없습니다", await client.GetStringAsync($"/Batches?id={ng.ClosedByBatch}"));
+        Assert.Contains("이슈가 없습니다", await GetOkAsync(client, $"/Batches?id={ng.ClosedByBatch}"));
     }
 
     [SqlFact]
@@ -127,9 +127,23 @@ public class WebTests
         Assert.Equal(25, drift.RootElement.GetProperty("points").GetArrayLength());
         Assert.StartsWith("2026-01-20", drift.RootElement.GetProperty("firstEwmaAlarm").GetString());
 
-        var page = await client.GetStringAsync("/Drift");
+        var page = await GetOkAsync(client, "/Drift");
         Assert.Contains("EWMA 관리도", page);
         Assert.Contains("경보", page);
+    }
+
+    /// <summary>실패하면 개발자 예외 페이지의 핵심 내용을 메시지에 담는다.</summary>
+    private static async Task<string> GetOkAsync(HttpClient client, string url)
+    {
+        var response = await client.GetAsync(url);
+        var body = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            var text = System.Text.RegularExpressions.Regex.Replace(body, "<[^>]+>", " ");
+            text = System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " "));
+            Assert.Fail($"{url} → {(int)response.StatusCode}: {text[..Math.Min(text.Length, 1500)]}");
+        }
+        return body;
     }
 
     private static int CountOccurrences(string text, string value)
