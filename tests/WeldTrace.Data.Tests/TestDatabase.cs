@@ -70,7 +70,7 @@ public sealed class TestDatabase : IAsyncDisposable
     }
 }
 
-internal static class Csv
+public static class Csv
 {
     public static readonly WeldProgram Program = WeldProgram.BatteryModuleDefault();
 

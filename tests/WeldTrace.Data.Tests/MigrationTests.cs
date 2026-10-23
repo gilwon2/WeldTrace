@@ -22,6 +22,23 @@ public class MigrationTests
     }
 
     [SqlFact]
+    public async Task Ensure_database_creates_missing_database_once()
+    {
+        var server = Environment.GetEnvironmentVariable(TestDatabase.EnvVar)!;
+        var name = "WeldTrace_ensure_" + Guid.NewGuid().ToString("N")[..8];
+        var target = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(server) { InitialCatalog = name }.ConnectionString;
+
+        await SqlMigrator.EnsureDatabaseAsync(target);
+        await SqlMigrator.EnsureDatabaseAsync(target); // 두 번째는 아무것도 하지 않음
+
+        await using var master = new Microsoft.Data.SqlClient.SqlConnection(server);
+        await master.OpenAsync();
+        Assert.NotNull(await master.QuerySingleAsync<int?>("SELECT DB_ID(@name)", new { name }));
+        Microsoft.Data.SqlClient.SqlConnection.ClearAllPools();
+        await master.ExecuteAsync($"DROP DATABASE [{name}]");
+    }
+
+    [SqlFact]
     public async Task Seeded_recipe_matches_default_program()
     {
         await using var db = await TestDatabase.CreateAsync();

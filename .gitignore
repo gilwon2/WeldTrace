@@ -15,3 +15,9 @@ data/kamp/
 # 로컬 설정
 .env
 appsettings.Local.json
+
+# 수집기 작업 폴더
+data/inbox/
+data/processed/
+data/failed/
+src/WeldTrace.Collector/data/

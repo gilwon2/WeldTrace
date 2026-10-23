@@ -41,6 +41,30 @@ public static partial class SqlMigrator
         return scripts.OrderBy(s => s.Version).ToList();
     }
 
+    /// <summary>
+    /// 접속 문자열에 지정된 데이터베이스가 없으면 만든다 (master에 접속해서 확인). 이미 있으면 아무것도 하지 않는다.
+    /// </summary>
+    public static async Task EnsureDatabaseAsync(string connectionString, CancellationToken ct = default)
+    {
+        var builder = new SqlConnectionStringBuilder(connectionString);
+        var name = builder.InitialCatalog;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("접속 문자열에 데이터베이스(Database=...)가 지정되지 않았습니다.");
+
+        builder.InitialCatalog = "master";
+        await using var master = new SqlConnection(builder.ConnectionString);
+        await master.OpenAsync(ct);
+        // 이름은 QUOTENAME으로 감싸 동적 SQL 주입을 막는다.
+        await master.ExecuteAsync(new CommandDefinition(
+            """
+            IF DB_ID(@name) IS NULL
+            BEGIN
+                DECLARE @sql nvarchar(400) = N'CREATE DATABASE ' + QUOTENAME(@name);
+                EXEC sys.sp_executesql @sql;
+            END
+            """, new { name }, cancellationToken: ct));
+    }
+
     /// <summary>적용되지 않은 스크립트를 적용하고, 새로 적용한 버전 목록을 돌려준다.</summary>
     public static async Task<IReadOnlyList<int>> MigrateAsync(string connectionString, CancellationToken ct = default)
     {
