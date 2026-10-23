@@ -1,10 +1,15 @@
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
+using Microsoft.Extensions.WebEncoders;
 using WeldTrace.Data;
 using WeldTrace.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+// 기본 HTML 인코더는 기본 라틴 문자 외를 &#x...; 엔티티로 바꾼다. 한글 화면이므로 유니코드 전체를 그대로 출력한다.
+builder.Services.Configure<WebEncoderOptions>(o => o.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All));
 builder.Services.AddSingleton(sp =>
 {
     var connectionString = sp.GetRequiredService<IConfiguration>().GetConnectionString("WeldTrace")
