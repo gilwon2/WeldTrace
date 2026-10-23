@@ -1,0 +1,22 @@
+# 로컬 개발용 SQL Server
+#   docker compose up -d
+#   통합 테스트: WELDTRACE_TEST_SQL 환경 변수를 아래 접속 문자열로 설정 후 dotnet test
+#   Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "WeldTrace!Local2026"
+    ports:
+      - "1433:1433"
+    volumes:
+      - weldtrace-sql:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'WeldTrace!Local2026' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  weldtrace-sql:

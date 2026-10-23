@@ -3,7 +3,15 @@
 > 전기차 배터리 모듈 **레이저 용접 라인의 MES·설비 데이터 시스템** (C# .NET 8 · SQL Server)
 > 용접기 데이터를 주기적으로 수집·검증해 모듈 단위로 추적하고, 출력 이상과 **레이저 출력의 점진적 열화**를 잡아냅니다.
 
-🚧 **개발 중** — 1주 차: 도메인 로직(Core) 완료, 다음은 SQL Server 적재와 수집기입니다. [진행 현황](#진행-현황)
+🚧 **개발 중** — 도메인 로직과 SQL Server 적재 완료, 다음은 수집기와 화면입니다. [진행 현황](#진행-현황)
+
+| 지표 | 값 |
+|---|---|
+| 테스트 | 74개 통과 (단위 59 + SQL Server 통합 15) |
+| 라인 커버리지 | 83.9% |
+| 빌드 경고 | 0 |
+| 10만 행 적재 | 106,703행 · 2,736모듈 10.4초 (CI, SQL Server 2022 컨테이너) |
+| 교차 검증 | 샘플 전체 판정 결과가 독립 Python 구현과 일치 |
 
 ## 왜 만들었나
 
@@ -26,8 +34,8 @@
 | 영역 | 내용 | 상태 |
 |---|---|---|
 | 도메인 (`WeldTrace.Core`) | 39스텝 레시피, CSV 파싱, 검증 규칙, 모듈 조립, 판정, EWMA·CUSUM, 추세 예측, FactoryLens 내보내기 | ✅ |
-| 저장 (`WeldTrace.Data`) | SQL Server 스키마, 멱등 적재, 배치 이력, 역추적 쿼리 | 다음 |
-| 수집 (`WeldTrace.Collector`) | .NET Worker Service, 주기 수집 | 예정 |
+| 저장 (`WeldTrace.Data`) | SQL Server 스키마·마이그레이션, 멱등 적재(K1 파일·K2 행), 배치 이력, 열린 모듈, 품질·역추적 뷰 | ✅ |
+| 수집 (`WeldTrace.Collector`) | .NET Worker Service, 주기 수집 | 다음 |
 | 화면 (`WeldTrace.Web`) | ASP.NET Core 모니터링 화면·API | 예정 |
 
 ## 판정 규칙 요약
@@ -43,8 +51,19 @@
 ## 실행
 
 ```bash
+dotnet test WeldTrace.sln          # 단위 테스트 (SQL Server 통합 테스트는 자동으로 건너뜀)
+```
+
+SQL Server 통합 테스트까지 돌리려면:
+
+```bash
+docker compose up -d
+# PowerShell: $env:WELDTRACE_TEST_SQL="Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+export WELDTRACE_TEST_SQL="Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
 dotnet test WeldTrace.sln
 ```
+
+규칙 전체: [docs/rules.md](docs/rules.md)
 
 합성 데이터 다시 만들기 (표준 라이브러리만 사용):
 
@@ -65,7 +84,8 @@ python tools/synth/generate.py --days 60 --seed 7 --out data/sample
 - [x] 실데이터 분석과 설계 근거 정리
 - [x] 합성 데이터 생성기
 - [x] Core: 파싱·검증·모듈 조립·판정·관리도·추세·내보내기 + 단위 테스트
-- [ ] SQL Server 스키마와 적재 (멱등, 배치 이력)
+- [x] SQL Server 스키마와 적재 (멱등, 배치 이력, 열린 모듈)
+- [x] 10만 행 규모 테스트와 독립 구현 교차 검증
 - [ ] 수집기 (Worker Service)
 - [ ] 모니터링 화면과 API
 - [ ] Docker Compose, 배포, 기술 선택 트레이드오프 표
