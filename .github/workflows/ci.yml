@@ -99,6 +99,13 @@ jobs:
               welds=$(sql "SELECT COUNT(*) FROM WeldTrace.dbo.weld")
               ng=$(sql "SELECT COUNT(*) FROM WeldTrace.dbo.module WHERE verdict='NG'")
               echo "::notice::E2E: ${batches} files collected, ${welds} welds, ${modules} modules (${ng} NG) after $((i*5))s"
+              # 웹 화면과 API가 같은 DB를 읽는지 확인
+              for n in $(seq 1 12); do curl -fsS http://localhost:8080/health >/dev/null 2>&1 && break; sleep 5; done
+              home=$(curl -fsS http://localhost:8080/)
+              echo "$home" | grep -q "최근 불량 모듈\|판정 완료 모듈" || { echo "::error::E2E: 웹 현황 화면에 판정 결과가 없습니다"; exit 1; }
+              api_modules=$(curl -fsS http://localhost:8080/api/overview | python3 -c "import sys,json; print(json.load(sys.stdin)['modules'])")
+              curl -fsS -o /dev/null http://localhost:8080/Drift && curl -fsS -o /dev/null http://localhost:8080/Modules && curl -fsS -o /dev/null http://localhost:8080/Batches
+              echo "::notice::E2E web: pages OK, /api/overview modules=${api_modules}"
               exit 0
             fi
             sleep 5
@@ -106,6 +113,7 @@ jobs:
           echo "::error::E2E: 3분 안에 모듈이 50개 이상 수집되지 않았습니다"
           docker compose logs --no-color --tail 40 collector | sed 's/^/::error::collector /'
           docker compose logs --no-color --tail 20 simulator | sed 's/^/::error::simulator /'
+          docker compose logs --no-color --tail 20 web | sed 's/^/::error::web /'
           exit 1
 
       - name: Stop stack

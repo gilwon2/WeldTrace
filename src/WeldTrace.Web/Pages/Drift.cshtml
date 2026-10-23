@@ -1,0 +1,81 @@
+@page
+@model DriftModel
+@{
+    ViewData["Title"] = "출력 열화";
+    var r = Model.Report;
+}
+
+<div class="page-head">
+    <div>
+        <h1>레이저 출력 열화 감시</h1>
+        <p class="sub">가동일별 평균 출력 비율(실측 ÷ 스텝 공칭 출력)에 EWMA·CUSUM 관리도를 적용합니다</p>
+    </div>
+</div>
+
+@if (r is null)
+{
+    <section class="empty">
+        <h2>기준을 세우기에 가동일이 부족합니다</h2>
+        <p>첫 @DriftView.BaselineDays 가동일로 정상 기준을 정하고 그 이후를 감시합니다. 최소 @DriftView.MinimumDays일이 필요합니다 (현재 @Model.Days일).</p>
+    </section>
+}
+else
+{
+    <section class="kpis">
+        <article class="kpi @(r.AlarmNow ? "kpi-alarm" : "")">
+            <span class="kpi-label">현재 상태</span>
+            <strong class="kpi-value @(r.AlarmNow ? "text-ng" : "text-ok")">@(r.AlarmNow ? "경보" : "정상")</strong>
+            <span class="kpi-note">마지막 가동일 EWMA @Fmt.Ratio(r.Points[^1].Ewma) / 하한 @Fmt.Ratio(r.Points[^1].Lcl)</span>
+        </article>
+        <article class="kpi">
+            <span class="kpi-label">첫 경보</span>
+            <strong class="kpi-value">@Fmt.Date(r.FirstEwmaAlarm)</strong>
+            <span class="kpi-note">EWMA 기준 · CUSUM @Fmt.Date(r.FirstCusumAlarm)</span>
+        </article>
+        <article class="kpi">
+            <span class="kpi-label">추세 (직선)</span>
+            <strong class="kpi-value">@((r.SlopePerDay * 100).ToString("+0.0000;-0.0000"))%</strong>
+            <span class="kpi-note">하루당 출력 비율 변화</span>
+        </article>
+        <article class="kpi">
+            <span class="kpi-label">0.98 도달 예상</span>
+            <strong class="kpi-value">@Fmt.Date(r.Warning.ExpectedAt)</strong>
+            <span class="kpi-note">
+                @(r.Warning.DaysRemaining is { } w ? $"약 {w:F0}일 남음" : "현재 추세로는 도달하지 않음")
+                · 판정선 0.95: @Fmt.Date(r.Failure.ExpectedAt)
+            </span>
+        </article>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>EWMA 관리도</h2>
+            <span class="muted">점: 일평균 · 굵은 선: EWMA · 점선: 관리 한계 · 회색 구간: 기준(첫 @DriftView.BaselineDays 가동일)</span>
+        </div>
+        <div class="chart-box tall"><canvas id="ewmaChart"></canvas></div>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>CUSUM (하향)</h2>
+            <span class="muted">누적합이 결정 구간 H = 5σ를 넘으면 지속적인 하락으로 판단</span>
+        </div>
+        <div class="chart-box"><canvas id="cusumChart"></canvas></div>
+    </section>
+
+    <script type="application/json" id="driftData">@Html.Raw(JsonSerializer.Serialize(Model.ChartData))</script>
+
+    <section class="card note">
+        <h2>읽는 법</h2>
+        <ul>
+            <li><strong>기준</strong>: 첫 @DriftView.BaselineDays 가동일 평균 @Fmt.Ratio(r.Baseline.Mean), 표준편차 @r.Baseline.StdDev.ToString("F5").</li>
+            <li><strong>왜 하루 단위인가</strong>: 모듈 하나를 한 점으로 쓰면 하루 수십 점이 찍혀 열화가 없어도 오경보가 잦습니다. 같은 날 만든 모듈을 한 묶음(합리적 부분군)으로 봅니다.</li>
+            <li><strong>예측</strong>: 전체 기간의 직선 추세가 이어진다고 가정한 값입니다. 하락이 가속되면 실제 도달일은 더 빠릅니다.</li>
+            <li><strong>판정과의 관계</strong>: 0.95 미만 용접은 즉시 불량(출력 저하)으로 판정됩니다. 열화 감시는 그보다 훨씬 앞서 정비 시점을 알리기 위한 것입니다.</li>
+        </ul>
+    </section>
+}
+
+@section Scripts {
+    <script>WeldCharts.drift("ewmaChart", "cusumChart", "driftData");</script>
+}

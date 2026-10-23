@@ -1,0 +1,93 @@
+@page
+@model BatchesModel
+@{
+    ViewData["Title"] = "수집 이력";
+}
+
+<div class="page-head">
+    <div>
+        <h1>수집 이력</h1>
+        <p class="sub">설비가 내려놓은 파일 하나가 배치 하나입니다. 같은 파일은 다시 적재하지 않고(K1), 겹치는 행은 새 행만 넣습니다(K2)</p>
+    </div>
+</div>
+
+@if (Model.Id is not null)
+{
+    <section class="card">
+        <div class="card-head">
+            <h2>배치 @Model.Id 데이터 이슈</h2>
+            <a href="/Batches">닫기</a>
+        </div>
+        @if (Model.Issues.Count == 0)
+        {
+            <p class="muted">이슈가 없습니다.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th class="num">줄</th><th>코드</th><th>수준</th><th>사유</th></tr></thead>
+                <tbody>
+                @foreach (var i in Model.Issues)
+                {
+                    <tr>
+                        <td class="num">@i.LineNo</td>
+                        <td><code>@i.Code</code></td>
+                        <td><span class="badge @(i.Level == "ERROR" ? "ng" : i.Level == "WARNING" ? "warn" : "hold")">@i.Level</span></td>
+                        <td>@i.Message</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+        <p class="muted small">규칙 정의: P(파싱)·D(중복)·R(범위)·T(시간) — 저장소 docs/rules.md</p>
+    </section>
+}
+
+@if (Model.Batches.Count == 0)
+{
+    <section class="empty"><p>아직 수집 이력이 없습니다.</p></section>
+}
+else
+{
+    <section class="card flush">
+        <table class="table">
+            <thead>
+            <tr>
+                <th class="num">배치</th><th>파일</th><th>상태</th><th>시작</th>
+                <th class="num">읽음</th><th class="num">적재</th><th class="num">제외</th><th class="num">기존</th>
+                <th class="num">닫은 모듈</th><th class="num">이슈</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var b in Model.Batches)
+            {
+                <tr class="@(b.Status == "FAILED" ? "row-ng" : "")">
+                    <td class="num">@b.BatchId</td>
+                    <td class="mono">@b.SourceName</td>
+                    <td><span class="badge @(b.Status == "SUCCEEDED" ? "ok" : b.Status == "FAILED" ? "ng" : "hold")">@b.Status</span></td>
+                    <td>@Fmt.Time(b.StartedAt)</td>
+                    <td class="num">@Fmt.Num(b.RowsRead)</td>
+                    <td class="num">@Fmt.Num(b.RowsLoaded)</td>
+                    <td class="num">@Fmt.Num(b.RowsRejected)</td>
+                    <td class="num">@Fmt.Num(b.RowsAlreadyLoaded)</td>
+                    <td class="num">@Fmt.Num(b.ModulesClosed)</td>
+                    <td class="num">
+                        @if (b.Issues > 0)
+                        {
+                            <a href="/Batches?id=@b.BatchId">@b.Issues</a>
+                        }
+                        else
+                        {
+                            <span class="muted">0</span>
+                        }
+                    </td>
+                </tr>
+                @if (!string.IsNullOrEmpty(b.ErrorMessage))
+                {
+                    <tr class="row-ng"><td></td><td colspan="9" class="small">@b.ErrorMessage</td></tr>
+                }
+            }
+            </tbody>
+        </table>
+    </section>
+}

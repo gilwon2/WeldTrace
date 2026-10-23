@@ -1,0 +1,70 @@
+@page
+@model WeldTrace.Web.Pages.Modules.IndexModel
+@{
+    ViewData["Title"] = "모듈 추적";
+}
+
+<div class="page-head">
+    <div>
+        <h1>모듈 추적</h1>
+        <p class="sub">배터리 모듈 1개 = 레이저 용접 39스텝. 모듈을 누르면 스텝별 설정·실측 출력과 결함을 볼 수 있습니다</p>
+    </div>
+</div>
+
+<form class="filters" method="get">
+    <label>
+        가동일
+        <select name="date">
+            <option value="">전체</option>
+            @foreach (var d in Model.Dates)
+            {
+                <option value="@Fmt.Date(d)" selected="@(Model.Date?.Date == d.Date)">@Fmt.Date(d)</option>
+            }
+        </select>
+    </label>
+    <label>
+        판정
+        <select name="verdict">
+            <option value="">전체</option>
+            @foreach (var v in WeldTrace.Web.Pages.Modules.IndexModel.Verdicts)
+            {
+                <option value="@v" selected="@(Model.Verdict == v)">@Fmt.VerdictLabel(v)</option>
+            }
+        </select>
+    </label>
+    <button class="btn" type="submit">조회</button>
+    <span class="muted">@Model.Modules.Count개@(Model.Modules.Count == 500 ? " (최근 500개까지)" : "")</span>
+</form>
+
+@if (Model.Modules.Count == 0)
+{
+    <section class="empty"><p>조건에 맞는 모듈이 없습니다.</p></section>
+}
+else
+{
+    <section class="card flush">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>모듈</th><th>시작</th><th>종료</th><th class="num">용접</th><th>판정</th><th>대표 불량·경고</th>
+                <th class="num">평균 출력 비율</th><th class="num">적재 배치</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var m in Model.Modules)
+            {
+                <tr>
+                    <td><a href="/Modules/@m.ModuleId">#@m.ModuleId</a></td>
+                    <td>@Fmt.Time(m.StartTime)</td>
+                    <td>@Fmt.Time(m.EndTime)</td>
+                    <td class="num">@m.WeldCount</td>
+                    <td><span class="badge @Fmt.VerdictClass(m.Verdict)">@Fmt.VerdictLabel(m.Verdict)</span></td>
+                    <td>@Fmt.FaultLabel(m.PrimaryFault)</td>
+                    <td class="num">@Fmt.Ratio(m.MeanPowerRatio)</td>
+                    <td class="num"><a href="/Batches?id=@m.ClosedByBatch">@m.ClosedByBatch</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+}

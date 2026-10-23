@@ -1,0 +1,109 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "현황";
+    var o = Model.Overview;
+}
+
+<div class="page-head">
+    <div>
+        <h1>라인 현황</h1>
+        <p class="sub">마지막 수집 @Fmt.Time(o.LastBatchAt) · 용접 데이터 @Fmt.Date(o.FirstWeld) ~ @Fmt.Date(o.LastWeld)</p>
+    </div>
+    <div class="head-actions">
+        <a class="btn" href="/api/export/factorylens/production.csv">FactoryLens 생산 CSV</a>
+        <a class="btn" href="/api/export/factorylens/defects.csv">불량 CSV</a>
+    </div>
+</div>
+
+@if (!Model.HasData)
+{
+    <section class="empty">
+        <h2>아직 수집된 데이터가 없습니다</h2>
+        <p>수집기가 inbox 폴더의 용접 데이터를 적재하면 이 화면에 모듈 판정과 출력 추세가 나타납니다.</p>
+        <p class="muted">로컬 실행: <code>docker compose up -d --build</code></p>
+    </section>
+}
+else
+{
+    var last = Model.LastDay!;
+    var drift = Model.Drift;
+
+    <section class="kpis">
+        <article class="kpi">
+            <span class="kpi-label">판정 완료 모듈</span>
+            <strong class="kpi-value">@Fmt.Num(o.Modules)</strong>
+            <span class="kpi-note">용접 @Fmt.Num(o.Welds)회 · 대기 중 @Fmt.Num(o.OpenWelds)회</span>
+        </article>
+        <article class="kpi">
+            <span class="kpi-label">최근 가동일 불량률 (@Fmt.Date(last.WorkDate))</span>
+            <strong class="kpi-value @(last.NgModules > 0 ? "text-ng" : "")">@Fmt.Pct(last.NgRate)</strong>
+            <span class="kpi-note">@last.Modules개 중 불량 @last.NgModules · 경고 @last.WarningModules</span>
+        </article>
+        <article class="kpi">
+            <span class="kpi-label">누적 판정</span>
+            <strong class="kpi-value">@Fmt.Pct((double)o.NgModules / o.Modules, 2)</strong>
+            <span class="kpi-note">불량 @o.NgModules · 경고 @o.WarningModules · 보류 @o.HoldModules</span>
+        </article>
+        <article class="kpi @(drift?.AlarmNow == true ? "kpi-alarm" : "")">
+            <span class="kpi-label">레이저 출력 열화</span>
+            @if (drift is null)
+            {
+                <strong class="kpi-value muted">판단 보류</strong>
+                <span class="kpi-note">가동일 @DriftView.MinimumDays일 이상 필요</span>
+            }
+            else if (drift.AlarmNow)
+            {
+                <strong class="kpi-value text-ng">경보</strong>
+                <span class="kpi-note">첫 경보 @Fmt.Date(drift.FirstEwmaAlarm) · 0.98 도달 예상 @Fmt.Date(drift.Warning.ExpectedAt)</span>
+            }
+            else
+            {
+                <strong class="kpi-value text-ok">정상</strong>
+                <span class="kpi-note">EWMA 관리 한계 안 · 추세 @((drift.SlopePerDay * 100).ToString("+0.0000;-0.0000"))%/일</span>
+            }
+            <a class="kpi-link" href="/Drift">관리도 보기 →</a>
+        </article>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>가동일별 불량률과 평균 출력 비율</h2>
+            <span class="muted">막대: 불량률(%) · 선: 실측/공칭 출력 비율</span>
+        </div>
+        <div class="chart-box"><canvas id="dailyChart"></canvas></div>
+        <script type="application/json" id="dailyData">@Html.Raw(JsonSerializer.Serialize(Model.ChartData))</script>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2>최근 불량 모듈</h2>
+            <a href="/Modules?verdict=NG">전체 보기 →</a>
+        </div>
+        @if (Model.RecentNg.Count == 0)
+        {
+            <p class="muted">불량 모듈이 없습니다.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>모듈</th><th>시작</th><th>대표 불량</th><th class="num">평균 출력 비율</th></tr></thead>
+                <tbody>
+                @foreach (var m in Model.RecentNg)
+                {
+                    <tr>
+                        <td><a href="/Modules/@m.ModuleId">#@m.ModuleId</a></td>
+                        <td>@Fmt.Time(m.StartTime)</td>
+                        <td><span class="badge ng">@Fmt.FaultLabel(m.PrimaryFault)</span></td>
+                        <td class="num">@Fmt.Ratio(m.MeanPowerRatio)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </section>
+}
+
+@section Scripts {
+    <script>WeldCharts.daily("dailyChart", "dailyData");</script>
+}

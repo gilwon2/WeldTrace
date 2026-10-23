@@ -1,5 +1,8 @@
-# WeldTrace 실행 이미지 (수집기·시뮬레이터 공용)
+# WeldTrace 실행 이미지 (수집기·시뮬레이터·웹 공용)
 #   docker build --build-arg PROJECT=WeldTrace.Collector -t weldtrace-collector .
+#   웹은 ASP.NET 런타임이 필요: --build-arg BASE=mcr.microsoft.com/dotnet/aspnet:8.0
+ARG BASE=mcr.microsoft.com/dotnet/runtime:8.0
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG PROJECT
 WORKDIR /src
@@ -12,7 +15,7 @@ RUN dotnet restore src/${PROJECT}/${PROJECT}.csproj
 COPY src/ src/
 RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/runtime:8.0
+FROM ${BASE}
 ARG PROJECT
 ENV APP_DLL=${PROJECT}.dll
 WORKDIR /app

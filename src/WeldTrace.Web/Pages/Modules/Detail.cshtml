@@ -1,0 +1,58 @@
+@page "{id:int}"
+@model WeldTrace.Web.Pages.Modules.DetailModel
+@{
+    var m = Model.Trace.Module;
+    ViewData["Title"] = $"모듈 #{m.ModuleId}";
+}
+
+<div class="page-head">
+    <div>
+        <p class="crumb"><a href="/Modules">모듈 추적</a> /</p>
+        <h1>모듈 #@m.ModuleId <span class="badge big @Fmt.VerdictClass(m.Verdict)">@Fmt.VerdictLabel(m.Verdict)</span></h1>
+        <p class="sub">
+            @Fmt.Time(m.StartTime) ~ @Fmt.Time(m.EndTime) · 용접 @m.WeldCount회@(m.IsComplete ? "" : " (불완전)")
+            · 대표 @(string.IsNullOrEmpty(m.PrimaryFault) ? "이상 없음" : Fmt.FaultLabel(m.PrimaryFault))
+            · 평균 출력 비율 @Fmt.Ratio(m.MeanPowerRatio)
+        </p>
+    </div>
+</div>
+
+<section class="card">
+    <div class="card-head">
+        <h2>스텝별 출력 비율</h2>
+        <span class="muted">실측 ÷ 스텝 공칭 출력 · 빨간 막대: 불량 판정 · 주황 테두리: 설정 이탈 · 점선: 판정선 0.95</span>
+    </div>
+    <div class="chart-box"><canvas id="stepChart"></canvas></div>
+    <script type="application/json" id="stepData">@Html.Raw(JsonSerializer.Serialize(Model.ChartData))</script>
+</section>
+
+<section class="card flush">
+    <table class="table">
+        <thead>
+        <tr>
+            <th class="num">스텝</th><th>용접 시각</th><th class="num">설정 출력</th><th class="num">지정값</th>
+            <th class="num">실측 출력(W)</th><th class="num">출력 비율</th><th>결함</th><th class="num">배치</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var s in Model.Trace.Steps)
+        {
+            var faults = s.Faults?.Split(',') ?? Array.Empty<string>();
+            <tr class="@(faults.Any(f => f != "RECIPE_DEVIATION") ? "row-ng" : faults.Length > 0 ? "row-warn" : "")">
+                <td class="num">@s.PageNo</td>
+                <td>@Fmt.Time(s.WorkingTime)</td>
+                <td class="num @(s.SetPower != s.ExpectedSetPower ? "text-warn strong" : "")">@s.SetPower</td>
+                <td class="num muted">@s.ExpectedSetPower</td>
+                <td class="num">@Fmt.Num(s.RealPower)</td>
+                <td class="num">@Fmt.Ratio(s.PowerRatio)</td>
+                <td>@(string.Join(", ", faults.Select(f => Fmt.FaultLabel(f))))</td>
+                <td class="num"><a href="/Batches?id=@s.BatchId">@s.BatchId</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</section>
+
+@section Scripts {
+    <script>WeldCharts.steps("stepChart", "stepData");</script>
+}

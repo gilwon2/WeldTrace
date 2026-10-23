@@ -1,5 +1,6 @@
-# WeldTrace 로컬 실행: SQL Server + 용접기 시뮬레이터 + 수집기
+# WeldTrace 로컬 실행: SQL Server + 용접기 시뮬레이터 + 수집기 + 웹 화면
 #   docker compose up -d --build
+#   브라우저: http://localhost:8080
 #   docker compose logs -f collector
 #
 # 통합 테스트만 돌릴 때는 sqlserver만 띄우고 WELDTRACE_TEST_SQL을 설정한다:
@@ -34,6 +35,20 @@ services:
       Collector__PollSeconds: "5"
     volumes:
       - weldtrace-data:/data
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      args:
+        PROJECT: WeldTrace.Web
+        BASE: mcr.microsoft.com/dotnet/aspnet:8.0
+    environment:
+      ConnectionStrings__WeldTrace: "Server=sqlserver,1433;Database=WeldTrace;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+    ports:
+      - "8080:8080"
     depends_on:
       sqlserver:
         condition: service_healthy

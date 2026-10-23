@@ -1,0 +1,151 @@
+/* WeldTrace — 제조 현장 모니터링 화면. 정보 밀도는 높게, 색은 판정 의미에만 쓴다. */
+:root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --ink: #1c2330;
+    --ink-2: #4a5568;
+    --muted: #7a8494;
+    --line: #e2e5ea;
+    --bar: #18202c;
+    --bar-ink: #d7dce4;
+    --accent: #2f6fdb;
+    --ok: #1f8a5b;
+    --ok-bg: #e6f4ed;
+    --warn: #b9700a;
+    --warn-bg: #fdf1dd;
+    --ng: #c8322f;
+    --ng-bg: #fbe7e6;
+    --hold: #5d6778;
+    --hold-bg: #eceef2;
+    --radius: 10px;
+    --font: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "D2Coding", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 var(--font);
+    -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+h1, h2 { margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 1.55rem; }
+h2 { font-size: 1.02rem; }
+
+/* 상단 바 */
+.topbar { background: var(--bar); color: var(--bar-ink); }
+.topbar-inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 20px;
+    display: flex; align-items: center; gap: 28px; height: 56px;
+}
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 1.05rem; }
+.brand:hover { text-decoration: none; }
+.brand-mark {
+    width: 18px; height: 18px; border-radius: 4px;
+    background: linear-gradient(135deg, #ffb347 0%, #ff6a3d 60%, #d93a2b 100%);
+    box-shadow: 0 0 12px rgba(255, 120, 60, 0.55);
+}
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav a { color: var(--bar-ink); padding: 8px 12px; border-radius: 6px; font-size: 0.94rem; }
+.nav a:hover { background: rgba(255, 255, 255, 0.08); text-decoration: none; }
+.nav a.active { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.equipment-chip {
+    font-size: 0.82rem; color: #b8c0cc; border: 1px solid #344052;
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
+.footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 0 20px 32px; }
+
+/* 페이지 머리 */
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.sub { color: var(--ink-2); margin: 6px 0 0; }
+.crumb { margin: 0 0 4px; color: var(--muted); font-size: 0.88rem; }
+.head-actions { display: flex; gap: 8px; }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.kpi {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; position: relative;
+}
+.kpi-alarm { border-color: var(--ng); box-shadow: inset 4px 0 0 var(--ng); }
+.kpi-label { color: var(--ink-2); font-size: 0.85rem; }
+.kpi-value { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.kpi-note { color: var(--muted); font-size: 0.82rem; }
+.kpi-link { font-size: 0.85rem; margin-top: 4px; }
+
+/* 카드 */
+.card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; margin-bottom: 16px;
+}
+.card.flush { padding: 0; overflow-x: auto; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.card.note ul { margin: 10px 0 0; padding-left: 18px; color: var(--ink-2); }
+.card.note li { margin: 4px 0; }
+.chart-box { position: relative; height: 280px; }
+.chart-box.tall { height: 360px; }
+
+.empty {
+    background: var(--surface); border: 1px dashed #c9ced6; border-radius: var(--radius);
+    padding: 40px 24px; text-align: center; color: var(--ink-2);
+}
+.empty h1, .empty h2 { color: var(--ink); margin-bottom: 8px; }
+
+/* 표 */
+.table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.table th {
+    text-align: left; font-weight: 600; color: var(--ink-2); font-size: 0.8rem;
+    background: #fafbfc; border-bottom: 1px solid var(--line); padding: 9px 12px; white-space: nowrap;
+}
+.table td { border-bottom: 1px solid var(--line); padding: 8px 12px; white-space: nowrap; }
+.table tbody tr:hover { background: #f8f9fb; }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.row-ng td { background: var(--ng-bg); }
+.row-warn td { background: var(--warn-bg); }
+
+/* 판정 배지 */
+.badge {
+    display: inline-block; padding: 1px 9px; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+}
+.badge.big { font-size: 0.9rem; vertical-align: middle; margin-left: 6px; }
+.badge.ok { color: var(--ok); background: var(--ok-bg); }
+.badge.warn { color: var(--warn); background: var(--warn-bg); }
+.badge.ng { color: var(--ng); background: var(--ng-bg); }
+.badge.hold { color: var(--hold); background: var(--hold-bg); }
+
+.text-ok { color: var(--ok); }
+.text-ng { color: var(--ng); }
+.text-warn { color: var(--warn); }
+.strong { font-weight: 700; }
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+
+/* 필터·버튼 */
+.filters { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.filters label { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--ink-2); }
+select {
+    font: inherit; padding: 6px 10px; border: 1px solid #cfd4db; border-radius: 6px; background: #fff; min-width: 150px;
+}
+.btn {
+    display: inline-block; font: inherit; font-size: 0.88rem; font-weight: 600;
+    padding: 7px 14px; border-radius: 6px; border: 1px solid #cfd4db; background: #fff; color: var(--ink); cursor: pointer;
+}
+.btn:hover { background: #f1f3f6; text-decoration: none; }
+
+@media (max-width: 900px) {
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .topbar-inner { gap: 12px; height: auto; padding: 10px 16px; flex-wrap: wrap; }
+    .equipment-chip { display: none; }
+}
+@media (max-width: 520px) {
+    .kpis { grid-template-columns: 1fr; }
+    .container { padding: 16px 16px 40px; }
+}

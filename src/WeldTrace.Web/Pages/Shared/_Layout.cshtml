@@ -1,0 +1,40 @@
+@inject SiteContext Site
+@{
+    var page = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    string Active(string prefix) => page == prefix || (prefix != "/Index" && page.StartsWith(prefix)) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · WeldTrace</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>WeldTrace</span>
+        </a>
+        <nav class="nav">
+            <a class="@Active("/Index")" href="/">현황</a>
+            <a class="@Active("/Drift")" href="/Drift">출력 열화</a>
+            <a class="@Active("/Modules")" href="/Modules">모듈 추적</a>
+            <a class="@Active("/Batches")" href="/Batches">수집 이력</a>
+        </nav>
+        <span class="equipment-chip" title="감시 중인 설비">@Site.EquipmentId · 레이저 용접기</span>
+    </div>
+</header>
+<main class="container">
+    @RenderBody()
+</main>
+<footer class="footer">
+    배터리 모듈 레이저 용접 라인 MES·FDC 데모 · 공개 저장소의 데이터는 KAMP 원본 통계를 흉내 낸 합성 데이터입니다
+</footer>
+<script src="~/js/charts.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
