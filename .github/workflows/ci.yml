@@ -8,6 +8,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      # 통합 테스트용 SQL Server (테스트 전용 일회성 컨테이너)
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "WeldTrace!Ci2026"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'WeldTrace!Ci2026' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      WELDTRACE_TEST_SQL: "Server=localhost,1433;User Id=sa;Password=WeldTrace!Ci2026;TrustServerCertificate=True;Encrypt=False"
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +46,7 @@ jobs:
       - name: Test
         run: >
           dotnet test WeldTrace.sln --no-build -c Release
-          --logger "trx;LogFileName=results.trx"
+          --logger trx
           --collect:"XPlat Code Coverage"
           --results-directory TestResults
 

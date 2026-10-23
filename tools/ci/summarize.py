@@ -17,7 +17,7 @@ def main(root: str) -> int:
         print("::error::테스트 결과(TRX)가 없습니다.")
         return 1
 
-    total = passed = failed = 0
+    total = passed = failed = skipped = 0
     for trx in trx_files:
         tree = ET.parse(trx)
         counters = tree.find(".//t:ResultSummary/t:Counters", NS)
@@ -26,16 +26,21 @@ def main(root: str) -> int:
             passed += int(counters.get("passed", 0))
             failed += int(counters.get("failed", 0))
         for result in tree.iterfind(".//t:UnitTestResult", NS):
+            if result.get("outcome") == "NotExecuted":
+                skipped += 1
             if result.get("outcome") == "Failed":
                 message = result.findtext(".//t:Message", default="", namespaces=NS).strip().replace("\n", " ")
                 print(f"::error title={result.get('testName')}::{message[:900]}")
 
-    line_rate = None
+    covered = valid = 0
     for cov in base.rglob("coverage.cobertura.xml"):
-        line_rate = float(ET.parse(cov).getroot().get("line-rate", 0))
+        root = ET.parse(cov).getroot()
+        covered += int(root.get("lines-covered", 0))
+        valid += int(root.get("lines-valid", 0))
+    line_rate = covered / valid if valid else None
 
     coverage = f"{line_rate * 100:.1f}%" if line_rate is not None else "n/a"
-    summary = f"Tests: {passed}/{total} passed, {failed} failed. Line coverage: {coverage}"
+    summary = f"Tests: {passed}/{total} passed, {failed} failed, {skipped} skipped ({len(trx_files)} projects). Line coverage: {coverage}"
     print(f"::notice::{summary}")
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:
