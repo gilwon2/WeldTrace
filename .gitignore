@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+coverage*/
+# Python
+__pycache__/
+*.pyc
+.venv/
+# KAMP 원본 데이터는 재배포 허용이 명시되지 않아 커밋하지 않는다 (docs/data.md 참고)
+data/kamp/
+# 로컬 설정
+.env
+appsettings.Local.json
