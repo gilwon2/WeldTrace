@@ -71,6 +71,15 @@ public static partial class SqlMigrator
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(ct);
 
+        // 수집기와 웹이 동시에 뜨면 둘 다 마이그레이션을 시도한다. 세션 잠금으로 한 번에 하나만 적용하게 한다.
+        // 잠금은 연결이 닫힐 때 풀린다.
+        await connection.ExecuteAsync(new CommandDefinition("""
+            DECLARE @result int;
+            EXEC @result = sys.sp_getapplock @Resource = N'WeldTrace.Migrate', @LockMode = N'Exclusive',
+                                             @LockOwner = N'Session', @LockTimeout = 60000;
+            IF @result < 0 THROW 50001, N'마이그레이션 잠금을 얻지 못했습니다.', 1;
+            """, cancellationToken: ct));
+
         await connection.ExecuteAsync("""
             IF OBJECT_ID(N'dbo.schema_version', N'U') IS NULL
             CREATE TABLE dbo.schema_version (
