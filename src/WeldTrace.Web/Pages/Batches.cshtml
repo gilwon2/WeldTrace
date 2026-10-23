@@ -65,7 +65,7 @@ else
                     <td class="num">@b.BatchId</td>
                     <td class="mono">@b.SourceName</td>
                     <td><span class="badge @(b.Status == "SUCCEEDED" ? "ok" : b.Status == "FAILED" ? "ng" : "hold")">@b.Status</span></td>
-                    <td>@Fmt.Time(b.StartedAt)</td>
+                    <td>@Fmt.UtcTime(b.StartedAt)</td>
                     <td class="num">@Fmt.Num(b.RowsRead)</td>
                     <td class="num">@Fmt.Num(b.RowsLoaded)</td>
                     <td class="num">@Fmt.Num(b.RowsRejected)</td>

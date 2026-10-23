@@ -3,14 +3,16 @@
 > 전기차 배터리 모듈 **레이저 용접 라인의 MES·설비 데이터 시스템** (C# .NET 8 · SQL Server)
 > 용접기 데이터를 주기적으로 수집·검증해 모듈 단위로 추적하고, 출력 이상과 **레이저 출력의 점진적 열화**를 잡아냅니다.
 
-🚧 **개발 중** — 도메인 로직, SQL Server 적재, 수집기 완료. 다음은 모니터링 화면입니다. [진행 현황](#진행-현황)
+`docker compose up -d --build` 한 줄로 SQL Server · 가상 용접기 · 수집기 · 웹 화면이 함께 뜹니다 → http://localhost:8080
+
+![현황 화면](https://raw.githubusercontent.com/gilwon2/WeldTrace/screenshots/home.png)
 
 | 지표 | 값 |
 |---|---|
-| 테스트 | 83개 통과 (단위 64 + SQL Server 통합 19) |
+| 테스트 | 100개 통과 (단위 69 + SQL Server·웹 통합 31) |
 | 빌드 경고 | 0 |
 | 대량 적재 | 합성 샘플 134,003행 · 3,436모듈 (CI, SQL Server 2022 컨테이너) |
-| 종단 테스트 | CI에서 docker compose로 SQL Server·시뮬레이터·수집기를 띄워 실제 수집 확인 |
+| 종단 테스트 | CI에서 docker compose로 전체를 띄워 수집 → 판정 → 웹 화면·API까지 확인, 화면 캡처 자동 갱신 |
 | 교차 검증 | 샘플 전체 판정 결과가 독립 Python 구현과 일치, 조각 수집 결과가 일괄 적재와 일치 |
 
 ## 왜 만들었나
@@ -37,7 +39,18 @@
 | 저장 (`WeldTrace.Data`) | SQL Server 스키마·마이그레이션, 멱등 적재(K1 파일·K2 행), 배치 이력, 열린 모듈, 품질·역추적 뷰 | ✅ |
 | 수집 (`WeldTrace.Collector`) | .NET Worker Service: inbox 주기 처리, 결과별 보관, 시작 시 DB 생성·마이그레이션 | ✅ |
 | 시뮬레이터 (`WeldTrace.Simulator`) | 기록 데이터를 배속 재생해 조각 파일로 내려놓는 가상 용접기 | ✅ |
-| 화면 (`WeldTrace.Web`) | ASP.NET Core 모니터링 화면·API | 다음 |
+| 화면 (`WeldTrace.Web`) | ASP.NET Core Razor Pages: 현황, 출력 열화 관리도, 모듈 추적, 수집 이력 + JSON·CSV API | ✅ |
+
+## 화면
+
+| 출력 열화 감시 | 모듈 추적 (39스텝) |
+|---|---|
+| ![출력 열화](https://raw.githubusercontent.com/gilwon2/WeldTrace/screenshots/drift.png) | ![모듈 상세](https://raw.githubusercontent.com/gilwon2/WeldTrace/screenshots/module-detail.png) |
+
+- **출력 열화**: 가동일 평균 출력 비율에 EWMA·CUSUM 관리도. 회색은 기준 구간(첫 10가동일), 빨간 점은 경보일. 직선 추세로 0.98·0.95 도달 예상일을 표시합니다.
+- **모듈 추적**: 모듈 하나의 39회 용접을 스텝별 설정·실측 출력과 결함으로 역추적합니다 (MES 추적성).
+- **수집 이력**: 파일(배치)별 읽음·적재·제외·기존 건수와 데이터 이슈. 겹치는 파일을 넣으면 "기존" 열에 K2가 건너뛴 행 수가 보입니다.
+- 캡처는 CI가 77가동일 합성 샘플을 적재한 뒤 매번 새로 찍습니다.
 
 ## 판정 규칙 요약
 
@@ -55,6 +68,7 @@
 
 ```bash
 docker compose up -d --build
+# 브라우저에서 http://localhost:8080
 docker compose logs -f collector     # 5초마다 조각 파일을 적재하는 로그
 ```
 
@@ -100,8 +114,8 @@ python tools/synth/generate.py --days 60 --seed 7 --out data/sample
 - [x] 10만 행 규모 테스트와 독립 구현 교차 검증
 - [x] 수집기 (Worker Service)와 리플레이 시뮬레이터
 - [x] Docker Compose와 CI 종단 테스트
-- [ ] 모니터링 화면과 API
-- [ ] 배포, 기술 선택 트레이드오프 표
+- [x] 모니터링 화면과 API, CI 화면 캡처
+- [ ] 기술 선택 트레이드오프 표, 면접 대비 노트
 
 ## 관련 프로젝트
 

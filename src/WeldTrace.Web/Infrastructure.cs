@@ -65,6 +65,15 @@ public static class Fmt
     public static string Date(DateTime? value) => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "—";
     public static string Time(DateTime? value) => value?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "—";
 
+    private static readonly TimeZoneInfo Plant = TimeZoneInfo.FindSystemTimeZoneById("Asia/Seoul");
+
+    /// <summary>
+    /// DB가 UTC로 기록한 시각(배치 시작·완료)을 공장 현지 시각(KST)으로 표시한다.
+    /// 용접 시각은 설비가 현지 시각으로 찍으므로 변환하지 않는다.
+    /// </summary>
+    public static string UtcTime(DateTime? utc) =>
+        utc is { } v ? Time(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(v, DateTimeKind.Utc), Plant)) : "—";
+
     public static string VerdictLabel(string verdict) => verdict switch
     {
         "OK" => "정상",

@@ -8,7 +8,7 @@
 <div class="page-head">
     <div>
         <h1>라인 현황</h1>
-        <p class="sub">마지막 수집 @Fmt.Time(o.LastBatchAt) · 용접 데이터 @Fmt.Date(o.FirstWeld) ~ @Fmt.Date(o.LastWeld)</p>
+        <p class="sub">마지막 수집 @Fmt.UtcTime(o.LastBatchAt) · 용접 데이터 @Fmt.Date(o.FirstWeld) ~ @Fmt.Date(o.LastWeld)</p>
     </div>
     <div class="head-actions">
         <a class="btn" href="/api/export/factorylens/production.csv">FactoryLens 생산 CSV</a>
