@@ -42,6 +42,10 @@ def main(root: str) -> int:
     coverage = f"{line_rate * 100:.1f}%" if line_rate is not None else "n/a"
     summary = f"Tests: {passed}/{total} passed, {failed} failed, {skipped} skipped ({len(trx_files)} projects). Line coverage: {coverage}"
     print(f"::notice::{summary}")
+    perf = base / "perf.txt"
+    if perf.exists():
+        for line in perf.read_text(encoding="utf-8").splitlines():
+            print(f"::notice::{line}")
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:
         with open(step_summary, "a", encoding="utf-8") as f:

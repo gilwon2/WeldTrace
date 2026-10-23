@@ -24,6 +24,7 @@ jobs:
           --health-retries 12
     env:
       WELDTRACE_TEST_SQL: "Server=localhost,1433;User Id=sa;Password=WeldTrace!Ci2026;TrustServerCertificate=True;Encrypt=False"
+      WELDTRACE_PERF_OUT: ${{ github.workspace }}/TestResults/perf.txt
     steps:
       - uses: actions/checkout@v4
 
