@@ -206,7 +206,7 @@ public sealed class QueryService(string connectionString)
         await using var c = await OpenAsync(ct);
         return (await c.QueryAsync<IssueRow>(new CommandDefinition(
             """
-            SELECT line_no AS LineNo, code AS Code, level AS Level, message AS Message
+            SELECT line_no AS [LineNo], code AS Code, level AS Level, message AS Message
             FROM dbo.data_issue WHERE batch_id = @batchId ORDER BY line_no, issue_id
             """, new { batchId }, cancellationToken: ct))).ToList();
     }

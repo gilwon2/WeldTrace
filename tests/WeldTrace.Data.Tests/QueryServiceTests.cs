@@ -115,4 +115,19 @@ public class QueryServiceTests
         var onlyDay2 = await new QueryService(db.ConnectionString).FactoryLensAsync(Eq, from: new DateTime(2026, 1, 6));
         Assert.DoesNotContain("2026-01-05", onlyDay2.ProductionCsv);
     }
+
+    [SqlFact]
+    public async Task Batch_issues_are_listed_by_line()
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        var a = Csv.Module(Day1);
+        var file = Csv.File(a, Csv.Line(a[0]), "1,250,241.1,abc,1000,100,82,1154, 2026-01-05 10:00:00.000");
+        var report = await new IngestService(db.ConnectionString).IngestAsync(file, "issues.csv", Eq);
+
+        var issues = await new QueryService(db.ConnectionString).BatchIssuesAsync(report.BatchId!.Value);
+
+        // 헤더 1줄 + 모듈 39줄 → 중복은 41번 줄, 형식 오류는 42번 줄
+        Assert.Equal(new[] { (41, "D1", "WARNING"), (42, "P3", "ERROR") },
+            issues.Select(i => (i.LineNo!.Value, i.Code, i.Level)));
+    }
 }
