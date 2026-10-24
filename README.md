@@ -75,12 +75,16 @@ docker compose down -v               # 중지 + 데이터 삭제
 ```bash
 dotnet test WeldTrace.sln            # 단위 테스트 (SQL Server 통합 테스트는 자동으로 건너뜀)
 
-# SQL Server 통합 테스트까지
+# SQL Server 통합 테스트까지 (Docker의 SQL Server는 127.0.0.1:14333에 열림)
 docker compose up -d sqlserver
-# PowerShell: $env:WELDTRACE_TEST_SQL="Server=localhost,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
-export WELDTRACE_TEST_SQL="Server=localhost,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
-dotnet test WeldTrace.sln
+# Windows PowerShell
+$env:WELDTRACE_TEST_SQL="Server=127.0.0.1,14333;UID=sa;PWD=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+# macOS·Linux
+export WELDTRACE_TEST_SQL="Server=127.0.0.1,14333;UID=sa;PWD=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+dotnet test WeldTrace.sln          # 100개 (Windows + Docker Desktop에서도 확인)
 ```
+
+> Windows에서 `localhost`로 접속하면 IPv6(::1)로 먼저 시도해 연결 시간이 초과될 수 있어 `127.0.0.1`을 씁니다.
 
 **합성 데이터 다시 만들기** (Python 표준 라이브러리만 사용, 시드 고정)
 

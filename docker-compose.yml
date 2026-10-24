@@ -5,7 +5,7 @@
 #
 # 통합 테스트만 돌릴 때는 sqlserver만 띄우고 WELDTRACE_TEST_SQL을 설정한다:
 #   docker compose up -d sqlserver
-#   Server=localhost,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False
+#   Server=127.0.0.1,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
