@@ -63,8 +63,9 @@ jobs:
 
       - name: Capture screenshots and record tour
         run: |
-          python tools/ci/screenshots.py http://localhost:8080 shots
-          python tools/ci/demo.py tour http://localhost:8080 video
+          run() { "$@" > out.log 2>&1 || { tail -25 out.log | sed 's/^/::error::/'; exit 1; }; cat out.log; }
+          run python tools/ci/screenshots.py http://localhost:8080 shots
+          run python tools/ci/demo.py tour http://localhost:8080 video
           echo "::notice::Screenshots captured with ${MODULES} modules"
 
       - name: Build demo GIF
