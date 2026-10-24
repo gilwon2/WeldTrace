@@ -70,9 +70,9 @@ jobs:
 
       - name: Build demo GIF
         run: |
-          # 수집 장면은 2배속, 둘을 이어 붙여 960px · 8fps GIF로
+          # 수집 장면 2배속, 나머지 1.25배속. 860px · 5fps · 64색 (README에서 바로 보이도록 용량을 줄임)
           ffmpeg -loglevel error -y -i video/live.webm -i video/tour.webm -filter_complex \
-            "[0:v]setpts=0.5*PTS,fps=8,scale=960:-1:flags=lanczos[a];[1:v]fps=8,scale=960:-1:flags=lanczos[b];[a][b]concat=n=2:v=1:a=0,split[x][y];[x]palettegen=max_colors=128:stats_mode=diff[p];[y][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+            "[0:v]setpts=0.5*PTS,fps=5,scale=860:-1:flags=lanczos[a];[1:v]setpts=0.8*PTS,fps=5,scale=860:-1:flags=lanczos[b];[a][b]concat=n=2:v=1:a=0,split[x][y];[x]palettegen=max_colors=64:stats_mode=diff[p];[y][p]paletteuse=dither=none:diff_mode=rectangle" \
             shots/demo.gif
           size=$(du -h shots/demo.gif | cut -f1)
           length=$(ffprobe -v error -show_entries format=duration -of csv=p=0 shots/demo.gif)

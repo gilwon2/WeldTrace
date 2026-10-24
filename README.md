@@ -11,7 +11,9 @@
 - **실행:** `docker compose up -d --build` → http://localhost:8080 (SQL Server · 가상 용접기 · 수집기 · 웹 화면이 함께 뜹니다)
 - **문서:** [실데이터 분석](docs/analysis.md) · [검증·판정 규칙](docs/rules.md)
 
-![현황 화면](https://raw.githubusercontent.com/gilwon2/WeldTrace/screenshots/home.png)
+![WeldTrace 시연](https://raw.githubusercontent.com/gilwon2/WeldTrace/screenshots/demo.gif)
+
+<sub>시연 (약 45초): 가상 용접기 데이터가 5초마다 수집되어 모듈이 늘어남 → 77가동일 전체 적재 → 출력 열화 관리도 → 불량 모듈 39스텝 역추적 → 수집 이력·데이터 이슈. CI가 실제 시스템을 띄워 자동으로 녹화합니다.</sub>
 
 ## 해결하려는 문제
 
