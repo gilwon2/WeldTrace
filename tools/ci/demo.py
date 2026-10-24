@@ -89,6 +89,7 @@ def tour(page: Page, base: str) -> None:
 
     goto(page, base + "/Modules", "모듈 추적: 배터리 모듈 1개 = 레이저 용접 39스텝")
     page.wait_for_timeout(1500)
+    page.select_option("select[name=date]", "")  # 기본은 마지막 가동일이라 전체 기간으로 바꾼다
     page.select_option("select[name=verdict]", "NG")
     page.wait_for_timeout(700)
     page.click("form.filters button[type=submit]")
@@ -97,7 +98,9 @@ def tour(page: Page, base: str) -> None:
     page.wait_for_timeout(2200)
 
     # 첫 번째 불량 모듈 상세로 이동 (링크를 강조한 뒤 이동)
-    href = page.eval_on_selector("a[href^='/Modules/']:not([href*='?'])", "a => a.getAttribute('href')")
+    href = page.evaluate("() => document.querySelector(\"a[href^='/Modules/']:not([href*='?'])\")?.getAttribute('href')")
+    if not href:
+        raise SystemExit(f"불량 모듈 링크가 없습니다: {page.url}")
     highlight(page, f"a[href='{href}']")
     page.wait_for_timeout(900)
     goto(page, base + href, "39스텝 역추적: 어느 스텝에서 실측 출력이 공칭의 95% 아래로 떨어졌는지")
