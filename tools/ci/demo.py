@@ -23,7 +23,7 @@ CAPTION_JS = """
     el.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99999;' +
       'background:rgba(17,24,39,.92);color:#fff;padding:10px 20px;border-radius:10px;' +
       'font:600 17px "Noto Sans CJK KR","Noto Sans KR",sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25);' +
-      'max-width:1100px;text-align:center;line-height:1.45';
+      'max-width:1100px;text-align:center;line-height:1.45;pointer-events:none';
     document.body.appendChild(el);
   }
   el.textContent = text;
@@ -96,23 +96,22 @@ def tour(page: Page, base: str) -> None:
     caption(page, "불량(NG) 모듈만 조회")
     page.wait_for_timeout(2200)
 
-    first = page.locator("table a[href^='/Modules/']").first
-    first.click()
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(400)
-    caption(page, "39스텝 역추적: 어느 스텝에서 실측 출력이 공칭의 95% 아래로 떨어졌는지")
+    # 첫 번째 불량 모듈 상세로 이동 (링크를 강조한 뒤 이동)
+    href = page.eval_on_selector("a[href^='/Modules/']:not([href*='?'])", "a => a.getAttribute('href')")
+    highlight(page, f"a[href='{href}']")
+    page.wait_for_timeout(900)
+    goto(page, base + href, "39스텝 역추적: 어느 스텝에서 실측 출력이 공칭의 95% 아래로 떨어졌는지")
     page.wait_for_timeout(3000)
     scroll(page, 520)
     page.wait_for_timeout(2500)
 
     goto(page, base + "/Batches", "수집 이력: 파일 1개 = 배치 1개 · 같은 파일·겹치는 행은 다시 적재하지 않음")
     page.wait_for_timeout(2500)
-    issue = page.locator("a[href^='/Batches?id=']").first
-    if issue.count() > 0:
-        issue.click()
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(300)
-        caption(page, "제외·경고한 행은 줄 번호와 사유로 기록 (중복 D1 · 결측 P2 · 시간 역전 T1)")
+    href = page.evaluate("() => document.querySelector(\"a[href^='/Batches?id=']\")?.getAttribute('href')")
+    if href:
+        highlight(page, f"a[href='{href}']")
+        page.wait_for_timeout(900)
+        goto(page, base + href, "제외·경고한 행은 줄 번호와 사유로 기록 (예: 중복 D1 · 결측 P2 · 시간 역전 T1)")
         page.wait_for_timeout(3500)
 
 
