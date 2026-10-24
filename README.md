@@ -77,8 +77,8 @@ dotnet test WeldTrace.sln            # 단위 테스트 (SQL Server 통합 테�
 
 # SQL Server 통합 테스트까지
 docker compose up -d sqlserver
-# PowerShell: $env:WELDTRACE_TEST_SQL="Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
-export WELDTRACE_TEST_SQL="Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+# PowerShell: $env:WELDTRACE_TEST_SQL="Server=localhost,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
+export WELDTRACE_TEST_SQL="Server=localhost,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False"
 dotnet test WeldTrace.sln
 ```
 

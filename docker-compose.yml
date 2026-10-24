@@ -5,7 +5,7 @@
 #
 # 통합 테스트만 돌릴 때는 sqlserver만 띄우고 WELDTRACE_TEST_SQL을 설정한다:
 #   docker compose up -d sqlserver
-#   Server=localhost,1433;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False
+#   Server=localhost,14333;User Id=sa;Password=WeldTrace!Local2026;TrustServerCertificate=True;Encrypt=False
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -13,7 +13,10 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "WeldTrace!Local2026"
     ports:
-      - "1433:1433"
+      # PC 쪽 포트는 14333 (1433은 Windows가 예약하거나 PC에 설치된 SQL Server가 쓰는 경우가 많다).
+      # 127.0.0.1에만 열어 같은 네트워크의 다른 PC에서는 접속할 수 없게 한다.
+      # 웹·수집기는 Docker 내부 네트워크(sqlserver,1433)로 접속하므로 이 값과 무관하다.
+      - "127.0.0.1:${WELDTRACE_SQL_PORT:-14333}:1433"
     volumes:
       - weldtrace-sql:/var/opt/mssql
     healthcheck:
