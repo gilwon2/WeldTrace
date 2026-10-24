@@ -1,6 +1,6 @@
 name: Screenshots
 
-# README 화면 캡처는 화면·샘플이 바뀔 때만 다시 찍는다 (CI 종단 테스트와 분리해 CI 시간을 줄임)
+# README 화면 캡처·시연 GIF는 화면·샘플이 바뀔 때만 다시 만든다 (CI 종단 테스트와 분리해 CI 시간을 줄임)
 on:
   workflow_dispatch:
   push:
@@ -9,6 +9,7 @@ on:
       - "src/WeldTrace.Web/**"
       - "data/sample/**"
       - "tools/ci/screenshots.py"
+      - "tools/ci/demo.py"
       - ".github/workflows/screenshots.yml"
 
 concurrency:
@@ -23,8 +24,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start stack (without simulator)
-        run: docker compose up -d --build sqlserver collector web
+      - name: Start stack (with simulator)
+        run: docker compose up -d --build
+
+      - name: Install browser and tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk ffmpeg > /dev/null
+          pip install --quiet playwright==1.47.0
+          python -m playwright install --with-deps chromium > /dev/null
+
+      - name: Record live collection
+        run: |
+          # 가상 용접기가 도는 동안 모듈 수가 늘어나는 장면
+          for i in $(seq 1 60); do
+            modules=$(curl -fsS http://localhost:8080/api/overview 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['modules'])" 2>/dev/null || echo 0)
+            [ "${modules:-0}" -ge 5 ] && break
+            sleep 3
+          done
+          python tools/ci/demo.py live http://localhost:8080 video
+          docker compose stop simulator
 
       - name: Load full sample
         run: |
@@ -42,12 +61,21 @@ jobs:
           [ "$modules" -ge 3400 ] || { docker compose logs --no-color --tail 40 collector; exit 1; }
           echo "MODULES=$modules" >> "$GITHUB_ENV"
 
-      - name: Capture
+      - name: Capture screenshots and record tour
         run: |
-          pip install --quiet playwright==1.47.0
-          python -m playwright install --with-deps chromium > /dev/null
           python tools/ci/screenshots.py http://localhost:8080 shots
+          python tools/ci/demo.py tour http://localhost:8080 video
           echo "::notice::Screenshots captured with ${MODULES} modules"
+
+      - name: Build demo GIF
+        run: |
+          # 수집 장면은 2배속, 둘을 이어 붙여 960px · 8fps GIF로
+          ffmpeg -loglevel error -y -i video/live.webm -i video/tour.webm -filter_complex \
+            "[0:v]setpts=0.5*PTS,fps=8,scale=960:-1:flags=lanczos[a];[1:v]fps=8,scale=960:-1:flags=lanczos[b];[a][b]concat=n=2:v=1:a=0,split[x][y];[x]palettegen=max_colors=128:stats_mode=diff[p];[y][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+            shots/demo.gif
+          size=$(du -h shots/demo.gif | cut -f1)
+          length=$(ffprobe -v error -show_entries format=duration -of csv=p=0 shots/demo.gif)
+          echo "::notice::Demo GIF ${size}, ${length}s"
 
       - name: Publish screenshots branch
         run: |
